@@ -1,27 +1,25 @@
-const GRID_ORIG = 125;
-const GRID_SIZE = GRID_ORIG * 2 + 1;
-const HEXSIZE   =   2;
-const BGCOLOR   = 102;
-const GRIDCOLOR = 153;
+const GRID_ORIG  = 120;
+const GRID_SIZE  = GRID_ORIG * 2 + 1;
+const GRID_SCALE = 3;
+const CELL_SCALE = 3;
+const CELL_W = GRID_SCALE * Math.sqrt(3) * 0.5;
+const CELL_H = GRID_SCALE * 1.5;
 
-// Widths and heights from centre of pointy-top hexagon
-// see: https://www.redblobgames.com/grids/hexagons/
-const CELL_W = HEXSIZE * Math.sqrt(3) * 0.5;
-// const CELL_W2 = CELL_W1 * 0.5;
-const CELL_H = HEXSIZE * 1.5;
+const BGCOLOR    = 102;
+const GRIDCOLOR  = 153;
 
-let grid1, grid2, turn = 0;
+let grid1, grid2, generation = 0;
 
 function drawcell(ax, ay, c)
 {
     fill(c == 1 ? 0 : 255);  // 0 = white, 1 = black
-    // Simple 3x3 rectangle to keep it fast
-    rect(CELL_W * (ax * 2 + ay), CELL_H * ay, 3);
+    rect(CELL_W * (ax * 2 + ay), CELL_H * ay, CELL_SCALE);  // Square to keep it fast
 }
 
 function setup()
 {
     createCanvas(950, 850);
+    // blendMode(REPLACE);
     rectMode(CENTER);
     noStroke();
 
@@ -37,18 +35,19 @@ function setup()
         }
     }
 
-    // Part 1: get black tiles from puzzle input
-    const blacktiles = parse();
-    for (const tile of blacktiles) {
-        grid1[tile.y][tile.x] = 1;
+    // Part 1: get tile coordinates from puzzle input
+    const tiles = parse();
+    for (const tile of tiles) {
+        grid1[tile.y][tile.x] ^= 1;
     }
+    console.log(countblacktiles(grid1));
 }
 
 function draw()
 {
     background(BGCOLOR);
     translate(width / 2, height / 2);
-
+    
     for (let r = -GRID_ORIG; r <= GRID_ORIG; ++r) {
         for (let q = -GRID_ORIG; q <= GRID_ORIG; ++q) {
             if (abs(q + r) <= GRID_ORIG) {
@@ -56,20 +55,36 @@ function draw()
             }
         }
     }
+    text(generation + ": " + countblacktiles(grid1), -width/2 + 10, -height/2 + 20);
 
-    evolve(grid1, grid2);
-    const tmp = grid1;
-    grid1 = grid2;
-    grid2 = tmp;
-    
-    if (turn > 100) {
+
+    // Part 2: 100 days of flipping tiles
+    if (generation < 100) {
+        evolve(grid1, grid2, generation);
+        const tmp = grid1;
+        grid1 = grid2;
+        grid2 = tmp;
+        ++generation;
+    } else {
+        console.log(countblacktiles(grid1));
         noLoop();
     }
 }
 
-function evolve(a, b)
+function countblacktiles(a)
 {
-    const limit = GRID_ORIG - 100 + turn;
+    let sum = 0;
+    for (let y = 0; y < GRID_SIZE; ++y) {
+        for (let x = 0; x < GRID_SIZE; ++x) {
+            sum += a[y][x];
+        }
+    }
+    return sum;
+}
+
+function evolve(a, b, gen)
+{
+    const limit = 19 + gen;
     for (let r = -limit; r <= limit; ++r) {
         const y = GRID_ORIG + r;
         for (let q = -limit; q <= limit; ++q) {
@@ -91,7 +106,6 @@ function evolve(a, b)
             }
         }
     }
-    ++turn;
 }
 
 function parse()
